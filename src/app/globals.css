@@ -1,0 +1,32 @@
+/* frontend/src/app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import Google Font - Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* Basic body styles */
+body {
+  font-family: 'Inter', sans-serif;
+  @apply text-gray-800 bg-gray-50;
+}
+
+/* Custom scrollbar for better aesthetics */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
