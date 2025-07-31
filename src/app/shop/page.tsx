@@ -1,5 +1,4 @@
-// frontend/src/app/shop/page.tsx
-'use client'; // Keep this directive at the very top
+'use client'; 
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
