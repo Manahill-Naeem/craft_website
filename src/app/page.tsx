@@ -175,10 +175,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image'; // Keep Image for category cards
+import Image from 'next/image'; // Keep Image for potential future use or other images
 import { getActiveSale } from '@/lib/api';
 import { Sale } from '@/types';
-import MessageBox from '@/components/MessageBox'; // Ensure you have this component
+import MessageBox from '@/components/MessageBox';
 
 // Note: The categories array below is hardcoded for demonstration.
 // In a real app, you might fetch these from the backend as well.
@@ -186,25 +186,25 @@ const categories = [
   {
     name: "Wedding Essentials",
     description: "Everything you need for your special day: Nikkah pens, trays, Rasam glass, and more.",
-    image: "http://localhost:3001/images/categories/wedding-essentials.jpg",
+    // Removed or commented out: image: "http://localhost:3001/images/categories/wedding-essentials.jpg",
     link: "/shop?category=wedding-essentials",
   },
   {
     name: "Pearl Collection",
     description: "Handmade luxury items adorned with premium pearls.",
-    image: "http://localhost:3001/images/categories/pearl-collection.jpg",
+    // Removed or commented out: image: "http://localhost:3001/images/categories/pearl-collection.jpg",
     link: "/shop?category=pearl-collection",
   },
   {
     name: "Crystals",
     description: "Elegant creations featuring sparkling crystals.",
-    image: "http://localhost:3001/images/categories/crystals.jpg",
+    // Removed or commented out: image: "http://localhost:3001/images/categories/crystals.jpg",
     link: "/shop?category=crystal-collection",
   },
   {
     name: "Bouquet Collection",
     description: "Handcrafted bouquets for every occasion, made with love and creativity.",
-    image: "http://localhost:3001/images/categories/bouquet-collection.jpg",
+    // Removed or commented out: image: "http://localhost:3001/images/categories/bouquet-collection.jpg",
     link: "/shop?category=bouquet-collection",
   },
 ];
@@ -255,15 +255,12 @@ export default function Home() {
 
       {/* Dynamic Hero Banner Section */}
       {loadingBanner ? (
-        // Optional: Show a loading state while banner data is being fetched
         <section className="relative h-[500px] md:h-[600px] lg:h-[700px] w-full bg-gray-200 flex items-center justify-center text-center">
           <p className="text-primary-800 text-xl animate-pulse">Loading banner...</p>
         </section>
       ) : (
-        // Render banner only if it exists and is active
         activeSale && activeSale.isActive ? (
           <section className={`relative h-[500px] md:h-[600px] lg:h-[700px] w-full overflow-hidden flex items-center justify-center text-center ${activeSale.bannerBgColor} animate-pulse-subtle`}>
-            {/* No background image, just animated background color */}
             {/* Overlay Content */}
             <div className="relative z-10 p-4 md:p-8 text-white max-w-4xl mx-auto">
               <h1 className={`text-4xl md:text-6xl font-extrabold leading-tight mb-4 drop-shadow-lg ${activeSale.bannerTextColor}`}>
@@ -278,7 +275,6 @@ export default function Home() {
             </div>
           </section>
         ) : (
-          // Fallback if no active banner or banner is inactive
           <section className="flex flex-col items-center justify-center text-center py-16 px-4 bg-primary-50 mt-16">
             <h1 className="text-5xl md:text-6xl font-extrabold text-primary-800 drop-shadow-lg mb-4 tracking-widest" style={{ fontFamily: 'cursive' }}>Crafted Whispers</h1>
             <p className="text-xl md:text-2xl text-gray-700 mb-6 font-medium">Handmade Luxury | Pearls, Crystals & Custom Elegance</p>
@@ -296,7 +292,8 @@ export default function Home() {
             className={`rounded-3xl shadow-lg p-8 flex flex-col items-center justify-center hover:scale-105 transition-transform cursor-pointer bg-white text-primary-800 hover:bg-gray-50`}
             style={{ minHeight: '220px' }}
           >
-            <div className="w-20 h-20 mb-4 flex items-center justify-center overflow-hidden rounded-full bg-primary-200 shadow">
+            {/* Removed the Image component for category cards */}
+            {/* <div className="w-20 h-20 mb-4 flex items-center justify-center overflow-hidden rounded-full bg-primary-200 shadow">
               <Image
                 src={cat.image}
                 alt={cat.name}
@@ -305,7 +302,7 @@ export default function Home() {
                 className="object-cover w-full h-full"
                 priority={true}
               />
-            </div>
+            </div> */}
             <h2 className="text-2xl font-bold mb-2 text-center" style={{ fontFamily: 'cursive' }}>{cat.name}</h2>
             <p className="text-center text-gray-700 text-base">{cat.description}</p>
           </Link>
@@ -336,7 +333,9 @@ export default function Home() {
   );
 }
 
-// Helper component for Category Cards on homepage
+// CategoryCard component ab unused ho jayega agar Images remove kar di hain,
+// lekin agar aap inko sirf CSS ke saath dikhana chahte hain toh isko update kar sakte hain.
+/*
 interface CategoryCardProps {
   name: string;
   slug: string;
@@ -368,3 +367,4 @@ function CategoryCard({ name, slug, imageUrl }: CategoryCardProps) {
     </Link>
   );
 }
+*/
