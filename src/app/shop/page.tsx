@@ -1,32 +1,30 @@
 // frontend/src/app/shop/page.tsx
-'use client';
+'use client'; // Keep this directive
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react'; // Import Suspense
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Product, Category } from '@/types';
-import { getProducts, getCategories } from '@/lib/api'; // Corrected import from '@/lib/api'
+import { Product, Category, Sale } from '@/types';
+import { getProducts, getCategories, getActiveSale } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
-import MessageBox from '@/components/MessageBox'; // Import MessageBox for alerts
+import MessageBox from '@/components/MessageBox';
 
-export default function ShopPage() {
+// Main ShopPage component
+function ShopContent() { // Renamed to ShopContent to be wrapped by Suspense
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); // This hook requires a client component and can be problematic during SSR
 
-  // State for products and loading
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null); // State for error messages
+  const [error, setError] = useState<string | null>(null);
   const [messageBox, setMessageBox] = useState<{ message: string; type: 'success' | 'error' | 'info' | 'warning' } | null>(null);
 
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const PRODUCTS_PER_PAGE = 12; // Define how many products per page
+  const PRODUCTS_PER_PAGE = 12;
 
-  // Filter/Sort/Search states, initialized from URL params
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
-  const [selectedCategoryName, setSelectedCategoryName] = useState('All'); // Initialized after categories fetched
+  const [selectedCategoryName, setSelectedCategoryName] = useState('All');
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'default');
   const [minPrice, setMinPrice] = useState<number | ''>(
     searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice') as string) : ''
@@ -35,10 +33,11 @@ export default function ShopPage() {
     searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice') as string) : ''
   );
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
+  const [activeSale, setActiveSale] = useState<Sale | null>(null);
 
-  // Effect to fetch initial categories and set up initial state from URL params
+  // Fetch initial categories and active sale
   useEffect(() => {
-    const fetchInitialCategories = async () => {
+    const fetchData = async () => {
       try {
         const fetchedCategories: Category[] = await getCategories();
         const allCategory: Category = {
@@ -52,28 +51,28 @@ export default function ShopPage() {
         const allAvailableCategories = [allCategory, ...fetchedCategories.filter(cat => cat.isActive)];
         setAvailableCategories(allAvailableCategories);
 
-        // Set initial category based on URL param
         const urlCategorySlug = searchParams.get('category');
         const initialCategory = allAvailableCategories.find(cat => cat.slug === urlCategorySlug) || allCategory;
         setSelectedCategoryName(initialCategory.name);
 
-        // Initialize pagination from URL
         const urlPage = parseInt(searchParams.get('page') || '1');
         setCurrentPage(urlPage > 0 ? urlPage : 1);
 
+        const sale = await getActiveSale();
+        setActiveSale(sale);
+
       } catch (err: any) {
-        console.error("Failed to fetch initial categories:", err.message);
-        setError("Failed to load categories. Please try again later.");
-        setMessageBox({ message: "Failed to load categories. Please try again later.", type: "error" });
+        console.error("Failed to fetch initial data:", err.message);
+        setError("Failed to load shop data. Please try again later.");
+        setMessageBox({ message: "Failed to load shop data. Please try again later.", type: "error" });
       }
     };
-    fetchInitialCategories();
-  }, [searchParams]);
+    fetchData();
+  }, [searchParams]); // searchParams is a dependency here
 
-  // Use useCallback to memoize the fetch logic to prevent unnecessary re-creations
   const fetchProductsData = useCallback(async () => {
     setLoading(true);
-    setError(null); // Clear previous errors
+    setError(null);
 
     const currentCategory = availableCategories.find(cat => cat.name === selectedCategoryName);
     const categorySlugToFetch = currentCategory?.slug === 'all' ? undefined : currentCategory?.slug;
@@ -88,7 +87,24 @@ export default function ShopPage() {
         minPrice === '' ? undefined : minPrice,
         maxPrice === '' ? undefined : maxPrice
       );
-      setProducts(fetchedProducts);
+
+      const productsWithSaleProps = fetchedProducts.map(product => {
+        if (activeSale && activeSale.discountPercentage !== undefined) {
+          const discountFactor = (100 - activeSale.discountPercentage) / 100;
+          const discountedPrice = product.price * discountFactor;
+          return {
+            ...product,
+            isOnSale: true,
+            saleTagText: activeSale.tagText,
+            saleTagColor: activeSale.tagBgColor,
+            saleTextColor: activeSale.tagTextColor,
+            discountedPrice: parseFloat(discountedPrice.toFixed(2)),
+          };
+        }
+        return product;
+      });
+
+      setProducts(productsWithSaleProps);
       setCurrentPage(apiCurrentPage);
       setTotalPages(apiTotalPages);
 
@@ -96,28 +112,24 @@ export default function ShopPage() {
       console.error("Failed to fetch filtered products:", err.message);
       setError(err.message || "Failed to load products.");
       setMessageBox({ message: err.message || "Failed to load products.", type: "error" });
-      setProducts([]); 
+      setProducts([]);
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, selectedCategoryName, sortBy, currentPage, PRODUCTS_PER_PAGE, minPrice, maxPrice, availableCategories]);
+  }, [searchTerm, selectedCategoryName, sortBy, currentPage, PRODUCTS_PER_PAGE, minPrice, maxPrice, availableCategories, activeSale]);
 
 
-  // Effect for fetching products when filters/sort/page change
   useEffect(() => {
-    // Only fetch if availableCategories is populated (to avoid fetching before categories are ready)
     if (availableCategories.length > 0) {
-      // Debounce the fetch call to avoid too many requests while typing search term or price
       const timeoutId = setTimeout(() => {
         fetchProductsData();
-      }, (searchTerm || minPrice !== '' || maxPrice !== '') ? 500 : 0); // Debounce for search and price inputs
+      }, (searchTerm || minPrice !== '' || maxPrice !== '') ? 500 : 0);
 
-      return () => clearTimeout(timeoutId); // Cleanup timeout
+      return () => clearTimeout(timeoutId);
     }
   }, [fetchProductsData, searchTerm, minPrice, maxPrice, availableCategories]);
 
 
-  // Effect to synchronize state with URL query parameters
   useEffect(() => {
     const params = new URLSearchParams();
     if (searchTerm) params.set('search', searchTerm);
@@ -130,26 +142,24 @@ export default function ShopPage() {
     if (minPrice !== '') params.set('minPrice', minPrice.toString());
     if (maxPrice !== '') params.set('maxPrice', maxPrice.toString());
 
-    router.push(`?${params.toString()}`, { scroll: false }); // Update URL without scrolling
+    router.push(`?${params.toString()}`, { scroll: false });
   }, [searchTerm, selectedCategoryName, sortBy, currentPage, minPrice, maxPrice, availableCategories, router]);
 
 
-  // Handle pagination clicks
   const handlePageChange = (newPage: number) => {
     if (newPage > 0 && newPage <= totalPages) {
       setCurrentPage(newPage);
     }
   };
 
-  // Helper function to clear all filters
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedCategoryName('All');
     setSortBy('default');
     setMinPrice('');
     setMaxPrice('');
-    setCurrentPage(1); // Reset to first page
-    setMessageBox(null); // Clear any messages
+    setCurrentPage(1);
+    setMessageBox(null);
   };
 
   return (
@@ -166,7 +176,7 @@ export default function ShopPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Hero Section */}
           <div className="text-center mb-16">
-            <h1 className="text-4xl sm:text-5xl font-extrabold text-[#7A4E7A] leading-tight mb-4">
+            <h1 className="text-4xl sm:text-5xl font-extrabold text-primary-700 leading-tight mb-4">
               Explore Our Handcrafted Collections
             </h1>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
@@ -181,7 +191,7 @@ export default function ShopPage() {
               <input
                 type="text"
                 placeholder="Search products by name, description, or category..."
-                className="w-full p-3 pl-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B2B4F] focus:border-transparent transition"
+                className="w-full p-3 pl-10 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               />
@@ -192,7 +202,7 @@ export default function ShopPage() {
             <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
               {/* Category Filter */}
               <select
-                className="p-3 border border-gray-300 rounded-md bg-white text-gray-700 focus:ring-2 focus:ring-[#4B2B4F] focus:border-transparent transition"
+                className="p-3 border border-gray-300 rounded-md bg-white text-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
                 value={selectedCategoryName}
                 onChange={(e) => { setSelectedCategoryName(e.target.value); setCurrentPage(1); }}
               >
@@ -208,14 +218,14 @@ export default function ShopPage() {
                 <input
                   type="number"
                   placeholder="Min Price"
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B2B4F] focus:border-transparent transition"
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
                   value={minPrice}
                   onChange={(e) => { setMinPrice(e.target.value === '' ? '' : parseFloat(e.target.value)); setCurrentPage(1); }}
                 />
                 <input
                   type="number"
                   placeholder="Max Price"
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#4B2B4F] focus:border-transparent transition"
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
                   value={maxPrice}
                   onChange={(e) => { setMaxPrice(e.target.value === '' ? '' : parseFloat(e.target.value)); setCurrentPage(1); }}
                 />
@@ -223,7 +233,7 @@ export default function ShopPage() {
 
               {/* Sort By */}
               <select
-                className="p-3 border border-gray-300 rounded-md bg-white text-gray-700 focus:ring-2 focus:ring-[#4B2B4F] focus:border-transparent transition"
+                className="p-3 border border-gray-300 rounded-md bg-white text-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
                 value={sortBy}
                 onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1); }}
               >
@@ -275,7 +285,7 @@ export default function ShopPage() {
               <div className="mt-4">
                 <button
                   onClick={clearFilters}
-                  className="inline-block bg-[#4B2B4F] text-white font-semibold py-2 px-6 rounded-full shadow hover:bg-[#7A4E7A] transition"
+                  className="inline-block bg-primary-500 text-white font-semibold py-2 px-6 rounded-full shadow hover:bg-primary-700 transition"
                 >
                   Clear Filters
                 </button>
@@ -289,7 +299,7 @@ export default function ShopPage() {
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1 || loading}
-                className="px-4 py-2 bg-[#4B2B4F] text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#7A4E7A] transition"
+                className="px-4 py-2 bg-primary-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-700 transition"
               >
                 Previous
               </button>
@@ -299,7 +309,7 @@ export default function ShopPage() {
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages || loading}
-                className="px-4 py-2 bg-##4B2B4F] text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#7A4E7A] transition"
+                className="px-4 py-2 bg-primary-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-700 transition"
               >
                 Next
               </button>
@@ -309,7 +319,7 @@ export default function ShopPage() {
 
           {/* Call to Action for Custom Orders (Optional) */}
           <div className="text-center mt-20">
-            <h3 className="text-3xl font-bold text-[#7A4E7A] mb-6">
+            <h3 className="text-3xl font-bold text-primary-700 mb-6">
               Didn't find what you're looking for?
             </h3>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
@@ -317,7 +327,7 @@ export default function ShopPage() {
             </p>
             <Link
               href="/custom-orders"
-              className="inline-block bg-gold text-[#7A4E7A] font-semibold py-3 px-8 rounded-full shadow-lg hover:bg-yellow-600 transition duration-300 transform hover:scale-105"
+              className="inline-block bg-gold text-primary-700 font-semibold py-3 px-8 rounded-full shadow-lg hover:bg-yellow-600 transition duration-300 transform hover:scale-105"
             >
               Request a Custom Order
             </Link>

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Crafted Whispers',
     description: 'Handcrafted Wedding Essentials, Pearl & Crystal Collections',
-    url: 'https://www.yourwebsite.com', // Replace with your actual domain
+    url: 'https://www.yourwebsite.com', /git add 
     siteName: 'Crafted Whispers',
     images: [
       {
