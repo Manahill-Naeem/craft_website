@@ -1,4 +1,5 @@
-'use client'; 
+// frontend/src/app/shop/page.tsx
+'use client'; // <-- Ensure this is the very first line
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
@@ -8,8 +9,8 @@ import { getProducts, getCategories, getActiveSale } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
 import MessageBox from '@/components/MessageBox';
 
-// Renamed the inner component to emphasize it's not the default page export
-function _ShopContent() {
+// This is now the default exported component for the page
+export default function ShopPage() { // Renamed from _ShopContent
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -161,7 +162,8 @@ function _ShopContent() {
   };
 
   return (
-    <>
+    // Directly wrap the content with Suspense
+    <Suspense fallback={<div>Loading shop...</div>}>
       {messageBox && (
         <MessageBox
           message={messageBox.message}
@@ -332,15 +334,6 @@ function _ShopContent() {
           </div>
         </div>
       </div>
-    </>
-  );
-}
-
-// This is the default export for the page
-export default function ShopPageWrapper() { // Renamed from ShopPage
-  return (
-    <Suspense fallback={<div>Loading shop...</div>}>
-      <_ShopContent /> {/* Render the actual content component */}
     </Suspense>
   );
 }
