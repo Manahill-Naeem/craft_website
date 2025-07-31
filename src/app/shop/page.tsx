@@ -1,7 +1,7 @@
 // frontend/src/app/shop/page.tsx
-'use client'; // Keep this directive
+'use client'; // Keep this directive at the very top
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react'; // Import Suspense
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Product, Category, Sale } from '@/types';
@@ -9,10 +9,10 @@ import { getProducts, getCategories, getActiveSale } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
 import MessageBox from '@/components/MessageBox';
 
-// Main ShopPage component
-function ShopContent() { // Renamed to ShopContent to be wrapped by Suspense
+// Renamed the inner component to emphasize it's not the default page export
+function _ShopContent() {
   const router = useRouter();
-  const searchParams = useSearchParams(); // This hook requires a client component and can be problematic during SSR
+  const searchParams = useSearchParams();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +35,6 @@ function ShopContent() { // Renamed to ShopContent to be wrapped by Suspense
   const [availableCategories, setAvailableCategories] = useState<Category[]>([]);
   const [activeSale, setActiveSale] = useState<Sale | null>(null);
 
-  // Fetch initial categories and active sale
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -68,7 +67,7 @@ function ShopContent() { // Renamed to ShopContent to be wrapped by Suspense
       }
     };
     fetchData();
-  }, [searchParams]); // searchParams is a dependency here
+  }, [searchParams]);
 
   const fetchProductsData = useCallback(async () => {
     setLoading(true);
@@ -335,5 +334,14 @@ function ShopContent() { // Renamed to ShopContent to be wrapped by Suspense
         </div>
       </div>
     </>
+  );
+}
+
+// This is the default export for the page
+export default function ShopPageWrapper() { // Renamed from ShopPage
+  return (
+    <Suspense fallback={<div>Loading shop...</div>}>
+      <_ShopContent /> {/* Render the actual content component */}
+    </Suspense>
   );
 }
