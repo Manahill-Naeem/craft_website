@@ -9,10 +9,10 @@
         "lint": "next lint"
       },
       "engines": { 
-        "node": "18.x" 
+        "node": "20.x" 
       },
       "dependencies": {
-        "@firebase/auth": "^1.10.7",
+        "@firebase/auth": "^1.11.0",
         "@prisma/client": "^6.12.0",
         "@types/nodemailer": "^6.4.17",
         "firebase": "^11.9.1",
